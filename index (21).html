@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Codebox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0E0E10;
+  --bg-raised: #17171A;
+  --bg-elevated: #1E1E22;
+  --bg-hover: #26262B;
+  --border: #2A2A2F;
+  --text: #ECECEC;
+  --text-dim: #8A8A92;
+  --text-faint: #57575F;
+  --accent: #39FF88;
+  --accent-soft: rgba(57,255,136,0.14);
+  --ok: #6FCF97;
+  --err: #E5786D;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--text); font-family: var(--font-ui);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ---------- header ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg);
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14.5px; letter-spacing: -0.2px; }
+.brand-mark { color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
+.sidebar-toggle {
+  background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 6px;
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+}
+.sidebar-toggle:hover { background: var(--bg-hover); color: var(--text); }
+.topbar-spacer { flex: 1; }
+.icon-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim); cursor: pointer;
+  padding: 6px 10px; border-radius: 8px; font-size: 12.5px; font-family: var(--font-ui);
+  display: flex; align-items: center; gap: 6px;
+}
+.icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+.btn-accent {
+  background: var(--accent); color: #04170D; border: none; border-radius: 8px; padding: 7px 14px;
+  font-weight: 600; font-size: 12.5px; cursor: pointer; transition: filter .15s ease;
+}
+.btn-accent:hover { filter: brightness(1.08); }
+.btn-accent:disabled { background: var(--bg-elevated); color: var(--text-faint); cursor: not-allowed; }
+
+/* settings dropdown */
+.settings-wrap { position: relative; }
+.settings-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; width: 240px;
+  display: none; flex-direction: column; gap: 10px; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  font-size: 12.5px;
+}
+.settings-menu.open { display: flex; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-dim); }
+.settings-row select {
+  background: var(--bg-raised); color: var(--text); border: 1px solid var(--border); border-radius: 6px;
+  font-family: var(--font-ui); font-size: 12px; padding: 4px 6px;
+}
+.settings-row .switch { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
+.settings-row .switch input { opacity: 0; width: 0; height: 0; }
+.switch-track {
+  position: absolute; inset: 0; background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: 20px; cursor: pointer; transition: background .15s ease;
+}
+.switch-track::before {
+  content: ""; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px; background: var(--text-dim);
+  border-radius: 50%; transition: transform .15s ease, background .15s ease;
+}
+.settings-row input:checked + .switch-track { background: var(--accent-soft); border-color: var(--accent); }
+.settings-row input:checked + .switch-track::before { transform: translateX(14px); background: var(--accent); }
+.settings-divider { height: 1px; background: var(--border); margin: 2px 0; }
+.settings-link { background: none; border: none; color: var(--text-dim); text-align: left; cursor: pointer; font-size: 12px; padding: 2px 0; font-family: var(--font-ui); }
+.settings-link:hover { color: var(--text); }
+
+/* ---------- layout ---------- */
+.workspace { flex: 1; display: flex; min-height: 0; }
+
+.sidebar {
+  width: 230px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--bg-raised);
+  display: flex; flex-direction: column; transition: margin-left .18s ease, width .18s ease;
+}
+.sidebar.collapsed { margin-left: -230px; }
+.sidebar-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint);
+  padding: 12px 14px 8px; flex-shrink: 0; font-weight: 600;
+}
+.file-tree { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+.file-item {
+  font-family: var(--font-mono); font-size: 12px; padding: 7px 8px; border-radius: 7px; cursor: pointer;
+  color: var(--text-dim); word-break: break-all; display: flex; align-items: center; gap: 6px;
+}
+.file-item:hover { background: var(--bg-hover); color: var(--text); }
+.file-item.active { background: var(--accent-soft); color: var(--accent); }
+.empty-hint { color: var(--text-faint); font-size: 12px; padding: 10px 8px; line-height: 1.5; }
+
+.main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+
+.chat-scroll { flex: 1; overflow-y: auto; }
+.chat-inner { max-width: 720px; margin: 0 auto; padding: 28px 20px 12px; display: flex; flex-direction: column; gap: 16px; min-height: 100%; }
+
+.chat-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; color: var(--text-dim); gap: 6px; padding-bottom: 60px;
+}
+.chat-empty .big { font-size: 20px; font-weight: 600; color: var(--text); }
+.chat-empty .small { font-size: 13px; max-width: 380px; line-height: 1.5; }
+
+.msg { font-size: 14px; line-height: 1.55; max-width: 100%; }
+.msg-user {
+  align-self: flex-end; background: var(--bg-elevated); border-radius: 14px 14px 3px 14px;
+  padding: 10px 14px; max-width: 80%; white-space: pre-wrap;
+}
+.msg-assistant { align-self: flex-start; max-width: 100%; white-space: pre-wrap; }
+.msg-error {
+  align-self: flex-start; color: var(--err); background: rgba(229,120,109,0.08);
+  border: 1px solid rgba(229,120,109,0.25); border-radius: 10px; padding: 9px 12px; font-size: 13px;
+}
+.file-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.file-chip {
+  font-family: var(--font-mono); font-size: 11.5px; background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text-dim); padding: 4px 9px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+}
+.file-chip:hover { color: var(--accent); border-color: var(--accent); }
+.file-chip::before { content: "◇"; font-size: 10px; }
+
+/* ---------- status + progress ---------- */
+.status-wrap { max-width: 720px; margin: 0 auto; padding: 0 20px; width: 100%; }
+.status-line {
+  display: none; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim);
+  padding: 4px 2px 8px;
+}
+.status-line.active { display: flex; }
+.status-dots { display: inline-flex; gap: 3px; }
+.status-dots span {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent); opacity: 0.3;
+  animation: dotpulse 1.1s infinite ease-in-out;
+}
+.status-dots span:nth-child(2) { animation-delay: .15s; }
+.status-dots span:nth-child(3) { animation-delay: .3s; }
+@keyframes dotpulse { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+.progress-track {
+  height: 3px; border-radius: 3px; background: var(--bg-elevated); overflow: hidden; display: none; margin: 0 2px 4px;
+}
+.progress-track.active { display: block; }
+.progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width .35s ease; border-radius: 3px; }
+
+/* ---------- composer ---------- */
+.composer-wrap { padding: 10px 20px 18px; flex-shrink: 0; }
+.composer {
+  max-width: 720px; margin: 0 auto; background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: 18px; display: flex; align-items: flex-end; gap: 8px; padding: 10px 10px 10px 16px;
+  transition: border-color .15s ease;
+}
+.composer:focus-within { border-color: var(--accent); }
+.composer textarea {
+  flex: 1; resize: none; background: none; border: none; color: var(--text); font-family: var(--font-ui);
+  font-size: 14px; line-height: 1.5; padding: 6px 0; max-height: 160px; outline: none;
+}
+.composer textarea::placeholder { color: var(--text-faint); }
+.send-btn {
+  background: var(--accent); border: none; color: #04170D; width: 32px; height: 32px; border-radius: 10px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: filter .15s ease;
+}
+.send-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.send-btn:disabled { background: var(--bg-elevated); color: var(--text-faint); cursor: not-allowed; }
+
+/* ---------- code slide-over ---------- */
+.code-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; z-index: 100;
+}
+.code-overlay.open { display: block; }
+.code-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 92vw); background: var(--bg-raised);
+  border-left: 1px solid var(--border); display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .2s ease; z-index: 101;
+}
+.code-overlay.open .code-panel { transform: translateX(0); }
+.code-panel-header {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.code-panel-title { font-family: var(--font-mono); font-size: 13px; color: var(--text); flex: 1; word-break: break-all; }
+.code-panel-actions { display: flex; gap: 6px; }
+.code-view { flex: 1; margin: 0; overflow: auto; padding: 16px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; color: var(--text); white-space: pre; }
+
+/* ---------- tech log (hidden by default) ---------- */
+.tech-log-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; z-index: 100; }
+.tech-log-overlay.open { display: block; }
+.tech-log-panel {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(560px, 90vw); max-height: 70vh;
+  background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); z-index: 101;
+  display: flex; flex-direction: column;
+}
+.tech-log-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+.tech-log-header span { font-size: 12.5px; font-weight: 600; flex: 1; }
+.tech-log-body { flex: 1; overflow-y: auto; padding: 10px 16px; font-family: var(--font-mono); font-size: 11.5px; }
+.tech-log-line { color: var(--text-dim); padding: 2px 0; }
+.tech-log-time { color: var(--text-faint); margin-right: 8px; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+@media (max-width: 760px) {
+  .sidebar { position: fixed; left: 0; top: 49px; bottom: 0; z-index: 60; }
+  .sidebar.collapsed { margin-left: -230px; }
+}
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle files">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="brand"><span class="brand-mark">&gt;_</span><span>Codebox</span></div>
+    <div class="topbar-spacer"></div>
+    <button class="icon-btn" id="download-btn" style="display:none;">↓ Download</button>
+    <div class="settings-wrap">
+      <button class="icon-btn" id="settings-btn" title="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <div class="settings-menu" id="settings-menu">
+        <div class="settings-row">
+          <span>Output</span>
+          <select id="output-mode-select" class="select-ctrl">
+            <option value="single-file">Single file</option>
+            <option value="multi-file">Multiple files</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <span>Self-review pass</span>
+          <label class="switch">
+            <input type="checkbox" id="critique-toggle" />
+            <span class="switch-track"></span>
+          </label>
+        </div>
+        <div class="settings-divider"></div>
+        <button class="settings-link" id="show-log-btn">View technical log</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-label">Files</div>
+      <div class="file-tree" id="file-tree"><div class="empty-hint">Nothing built yet.</div></div>
+    </aside>
+
+    <div class="main-col">
+      <div class="chat-scroll" id="chat-scroll">
+        <div class="chat-inner" id="chat-inner">
+          <div class="chat-empty" id="chat-empty">
+            <div class="big">What do you want to build?</div>
+            <div class="small">Describe an app, a page, or a tool — Codebox plans it, writes it, and reviews its own work before handing it back.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-wrap">
+        <div class="status-line" id="status-line">
+          <span class="status-dots"><span></span><span></span><span></span></span>
+          <span id="status-text">Thinking…</span>
+        </div>
+        <div class="progress-track" id="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea id="chat-input" placeholder="Describe what to build — e.g. a social media app, a REST API, a landing page…" rows="1"></textarea>
+          <button class="send-btn" id="send-btn" title="Send">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-overlay" id="code-overlay">
+    <div class="code-panel">
+      <div class="code-panel-header">
+        <div class="code-panel-title" id="code-panel-title">file</div>
+        <div class="code-panel-actions">
+          <button class="icon-btn" id="copy-file-btn">Copy</button>
+          <button class="icon-btn" id="close-code-btn">Close</button>
+        </div>
+      </div>
+      <pre class="code-view" id="code-view"></pre>
+    </div>
+  </div>
+
+  <div class="tech-log-overlay" id="tech-log-overlay">
+    <div class="tech-log-panel">
+      <div class="tech-log-header"><span>Technical log</span><button class="icon-btn" id="close-log-btn">Close</button></div>
+      <div class="tech-log-body" id="tech-log-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- API keys live in the sibling keys/config.js file — everything else is right here -->
+  <script src="keys/config.js"></script>
+  <script>
+  // ===== Codebox engine =====
+
+  // Non-secret settings live here now — only keys (+ their models) live in keys/config.js
+  const SETTINGS = {
+    SITE_URL: "https://localhost",
+    SITE_NAME: "Codebox",
+    ENABLE_SELF_CRITIQUE: true,
+    DEFAULT_OUTPUT_MODE: "single-file",
+    REQUEST_TIMEOUT_MS: 60000,
+  };
+
+  // One shared pool of { key, model } pairs, used for every stage (planning,
+  // coding, reviewing, fixing alike). Only one entry needs to be filled in for
+  // the tool to run — extra entries are just fallback capacity: the moment an
+  // entry's key hits a rate limit or auth error, Codebox rotates to the next
+  // one automatically. Each entry can point at a different model, so keys can
+  // be mixed across providers freely; the model is never shown in the UI.
+  const KEY_POOL = (typeof CODEBOX_KEYS !== "undefined" && Array.isArray(CODEBOX_KEYS)) ? CODEBOX_KEYS : [];
+  function usablePool() {
+    return KEY_POOL.filter(e => e && e.key && e.model && !String(e.key).includes("PASTE_KEY") && !String(e.model).includes("PASTE_MODEL"));
+  }
+
+  const STAGE_LABELS = {
+    planning:  "Thinking…",
+    coding:    "Writing code…",
+    reviewing: "Double-checking the work…",
+    fixing:    "Fixing a few things…",
+    done:      "Done",
+    error:     "Something went wrong",
+  };
+  const STAGE_PROGRESS = { planning: 25, coding: 60, reviewing: 80, fixing: 92, done: 100 };
+
+  const OUTPUT_MODE_KEY = "codebox_output_mode";
+  const state = { messages: [], files: {}, stage: "idle", outputMode: localStorage.getItem(OUTPUT_MODE_KEY) || SETTINGS.DEFAULT_OUTPUT_MODE };
+
+  const el = {
+    chatInner: document.getElementById("chat-inner"), chatEmpty: document.getElementById("chat-empty"),
+    chatScroll: document.getElementById("chat-scroll"),
+    input: document.getElementById("chat-input"), send: document.getElementById("send-btn"),
+    fileTree: document.getElementById("file-tree"),
+    statusLine: document.getElementById("status-line"), statusText: document.getElementById("status-text"),
+    progressTrack: document.getElementById("progress-track"), progressFill: document.getElementById("progress-fill"),
+    downloadBtn: document.getElementById("download-btn"),
+    critiqueToggle: document.getElementById("critique-toggle"), outputModeSelect: document.getElementById("output-mode-select"),
+    sidebar: document.getElementById("sidebar"), sidebarToggle: document.getElementById("sidebar-toggle"),
+    settingsBtn: document.getElementById("settings-btn"), settingsMenu: document.getElementById("settings-menu"),
+    codeOverlay: document.getElementById("code-overlay"), codePanelTitle: document.getElementById("code-panel-title"),
+    codeView: document.getElementById("code-view"), closeCodeBtn: document.getElementById("close-code-btn"),
+    copyFileBtn: document.getElementById("copy-file-btn"),
+    showLogBtn: document.getElementById("show-log-btn"), techLogOverlay: document.getElementById("tech-log-overlay"),
+    techLogBody: document.getElementById("tech-log-body"), closeLogBtn: document.getElementById("close-log-btn"),
+  };
+
+  el.critiqueToggle.checked = SETTINGS.ENABLE_SELF_CRITIQUE;
+  el.outputModeSelect.value = state.outputMode;
+  el.outputModeSelect.addEventListener("change", () => {
+    state.outputMode = el.outputModeSelect.value;
+    localStorage.setItem(OUTPUT_MODE_KEY, state.outputMode);
+  });
+
+  el.sidebarToggle.addEventListener("click", () => el.sidebar.classList.toggle("collapsed"));
+  el.settingsBtn.addEventListener("click", (e) => { e.stopPropagation(); el.settingsMenu.classList.toggle("open"); });
+  document.addEventListener("click", (e) => { if (!el.settingsMenu.contains(e.target) && e.target !== el.settingsBtn) el.settingsMenu.classList.remove("open"); });
+  el.showLogBtn.addEventListener("click", () => { el.settingsMenu.classList.remove("open"); el.techLogOverlay.classList.add("open"); });
+  el.closeLogBtn.addEventListener("click", () => el.techLogOverlay.classList.remove("open"));
+  el.techLogOverlay.addEventListener("click", (e) => { if (e.target === el.techLogOverlay) el.techLogOverlay.classList.remove("open"); });
+  el.closeCodeBtn.addEventListener("click", () => el.codeOverlay.classList.remove("open"));
+  el.codeOverlay.addEventListener("click", (e) => { if (e.target === el.codeOverlay) el.codeOverlay.classList.remove("open"); });
+  el.copyFileBtn.addEventListener("click", () => { navigator.clipboard.writeText(el.codeView.textContent || ""); });
+
+  el.input.addEventListener("input", () => { el.input.style.height = "auto"; el.input.style.height = Math.min(el.input.scrollHeight, 160) + "px"; });
+
+  // Shared rotation: every stage (planner/coder/reviewer/fixer) draws from the
+  // same key+model pool. On a rate-limit / auth error it moves to the next
+  // entry in the pool; if every entry is exhausted, it reports that plainly.
+  async function callModel(stageLabel, systemPrompt, userPrompt) {
+    const pool = usablePool();
+    if (!pool.length) throw new Error("No API key set. Add at least one key in keys/config.js.");
+
+    let lastError;
+    for (let i = 0; i < pool.length; i++) {
+      const { key, model } = pool[i];
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SETTINGS.REQUEST_TIMEOUT_MS);
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}`, "HTTP-Referer": SETTINGS.SITE_URL, "X-Title": SETTINGS.SITE_NAME },
+          body: JSON.stringify({ model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], temperature: 0.3 }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (res.status === 429 || res.status === 401 || res.status === 403) {
+          lastError = new Error(`Key #${i + 1} (${stageLabel}) hit ${res.status} — rotating to the next key.`);
+          techLog(lastError.message); continue;
+        }
+        if (!res.ok) { const t = await res.text().catch(() => ""); throw new Error(`OpenRouter error ${res.status}: ${t.slice(0, 300)}`); }
+        const data = await res.json();
+        const text = data?.choices?.[0]?.message?.content;
+        if (!text) throw new Error("Empty response from model.");
+        if (i > 0) techLog(`Recovered using key #${i + 1} (${stageLabel}).`);
+        return text;
+      } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === "AbortError") { lastError = new Error(`Key #${i + 1} (${stageLabel}) timed out — rotating.`); techLog(lastError.message); continue; }
+        lastError = err; continue;
+      }
+    }
+    throw lastError || new Error("All configured API keys failed or hit their rate limit — add more in keys/config.js.");
+  }
+
+  // ---------- Pattern library: real-world feature sets the planner/coder consult ----------
+  const PATTERN_LIBRARY = {
+    "social media app": {
+      keywords: ["social media", "social app", "instagram", "facebook", "twitter", "feed app"],
+      core: "Auth (register/login, session persisted), a scrollable feed of posts (text/image), create-post composer, like + comment on posts, a stories row (24h-style, can be simulated), a simple profile page (avatar, bio, own posts grid), follow/unfollow between users, a basic DM/messaging view (thread list + conversation view). Data layer: localStorage-backed if no real backend requested (model users/posts/comments/messages as JSON collections with ids).",
+      backend_note: "If the request implies a real multi-user backend (persists across devices/users), generate actual server files too (e.g. Node/Express + a JSON-file or SQLite store) in addition to the frontend, and say clearly in the plan notes that the server needs to be run separately with `node server.js`.",
+    },
+    "e-commerce store": {
+      keywords: ["e-commerce", "ecommerce", "online store", "shop app", "shopping cart", "store website"],
+      core: "Product catalog (grid + detail page), cart (add/remove/quantity, persisted), checkout flow (address + mock payment form, no real payment processing), order confirmation, simple category/search filtering, an admin-lite product list (add/edit products) if the request implies a seller side.",
+      backend_note: "Real payment processing is out of scope — always build a mock/demo checkout, never wire up a live payment API.",
+    },
+    "blog / cms": {
+      keywords: ["blog", "cms", "publishing platform", "article site"],
+      core: "Post list (title, excerpt, date), full post view (markdown or rich text rendered), a simple author/editor view to create and edit posts, tags/categories, basic search.",
+      backend_note: "Posts can be localStorage-backed for single-file mode; for multi-file, a simple JSON-file-backed API is enough.",
+    },
+    "chat / messaging app": {
+      keywords: ["chat app", "messaging app", "whatsapp", "discord clone", "slack clone"],
+      core: "Contact/room list, active conversation view with message bubbles + timestamps, message input with send, typing indicator (can be simulated), unread badges. Real-time sync across devices needs a backend (WebSocket) — otherwise scope it to a single-browser demo with simulated replies.",
+      backend_note: "If true multi-user real-time is requested, generate a small WebSocket server file (Node + ws) alongside the frontend and say how to run it.",
+    },
+    "dashboard / admin panel": {
+      keywords: ["dashboard", "admin panel", "analytics panel", "control panel"],
+      core: "Sidebar nav, summary stat cards, at least one real chart (use Chart.js via CDN) fed by sample/mock data, a data table with sort/filter, a settings page. Favor clear information hierarchy over decoration.",
+      backend_note: "Mock data is fine unless the request names a real data source.",
+    },
+    "portfolio / personal site": {
+      keywords: ["portfolio", "personal website", "resume site", "cv site"],
+      core: "Hero section, about section, a projects/work grid with case-study-style detail, a contact section/form (can be mailto: or a formatted contact block if no backend), simple smooth-scroll nav.",
+      backend_note: "No backend needed unless a real contact-form submission endpoint is requested.",
+    },
+    "todo / productivity app": {
+      keywords: ["todo app", "task manager", "productivity app", "to-do list"],
+      core: "Add/edit/delete tasks, mark complete, due dates, simple priority or tag, filter (all/active/done), persisted in localStorage.",
+      backend_note: "Rarely needs a backend — keep it client-only unless multi-device sync is explicitly requested.",
+    },
+    "forum / community board": {
+      keywords: ["forum", "community board", "discussion board", "reddit clone"],
+      core: "Category/board list, thread list per board, thread detail with nested or flat replies, new-thread composer, basic upvote/downvote.",
+      backend_note: "localStorage for single-file demos; a small JSON-backed API for multi-file if persistence across users is implied.",
+    },
+    "landing page": {
+      keywords: ["landing page", "product page", "marketing site", "waitlist page"],
+      core: "Hero with clear value prop, feature highlights section, social proof/testimonials section, pricing (if applicable), a clear call-to-action (signup/waitlist form — can submit to a mock handler), footer.",
+      backend_note: "No backend needed unless a real signup endpoint is requested.",
+    },
+  };
+
+  function matchPatterns(userRequest) {
+    const lower = userRequest.toLowerCase();
+    const hits = [];
+    for (const [name, def] of Object.entries(PATTERN_LIBRARY)) {
+      if (def.keywords.some(kw => lower.includes(kw))) hits.push({ name, ...def });
+    }
+    return hits;
+  }
+
+  function patternContext(userRequest) {
+    const hits = matchPatterns(userRequest);
+    if (!hits.length) return "";
+    return "\n\nReference pattern(s) for this kind of app — use these as the real-world baseline feature set, adapting to anything the request specifies on top:\n" +
+      hits.map(h => `- ${h.name}: ${h.core}\n  Backend note: ${h.backend_note}`).join("\n");
+  }
+
+  function parseJSONLoose(text) {
+    let cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+    const first = cleaned.indexOf("{"), last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last !== -1 && last > first) cleaned = cleaned.slice(first, last + 1);
+    return JSON.parse(cleaned);
+  }
+
+  const PLANNER_SYSTEM = `You are a senior software architect. Given a coding request, produce a short build plan.
+Never ask the user clarifying questions — if the request is broad (e.g. "make a social media app"), make the
+reasonable, real-world default choices yourself and note them as assumptions instead of asking.
+Respond with ONLY raw JSON, no markdown fences, no commentary:
+{ "summary": "one paragraph describing the approach", "files": [ { "path": "relative/file/path.ext", "purpose": "one line" } ], "notes": "assumptions you made" }`;
+
+  function coderSystem(outputMode) {
+    if (outputMode === "single-file") {
+      return `You are a senior software engineer. Write ONE complete, working, runnable HTML file that bundles everything: markup, all CSS inside a single <style> tag, all JS inside a single <script> tag at the end of <body>. No local file references.
+Never ask clarifying questions. If the request is broad (e.g. "make a social media app"), implement a real, working version of the obvious core features yourself: login/register (client-side/localStorage-backed if no backend implied), a feed, creating posts, a stories row, a simple DM view — build them for real, don't stub them.
+Respond with ONLY raw JSON: { "files": [ { "path": "app.html", "content": "the FULL html file, real newlines escaped as \\n" } ] }
+The files array must contain exactly one file.`;
+    }
+    return `You are a senior software engineer. Write complete, working, runnable code for every file in the plan.
+Never ask clarifying questions. If the request is broad, implement the obvious real feature set yourself with sensible defaults — build it for real, not stubs.
+Respond with ONLY raw JSON: { "files": [ { "path": "relative/file/path.ext", "content": "full file content, real newlines escaped as \\n" } ] }
+Rules: complete file contents only, never truncated; code must be consistent across files; no explanations outside the JSON.`;
+  }
+
+  const REVIEWER_SYSTEM = `You are a strict code reviewer. Find real bugs: syntax errors, missing imports, undefined references, logic errors, mismatched signatures, anything that would crash on run. If a reference pattern's core feature list was provided in the original context, also flag any core feature that is clearly missing or only stubbed (e.g. a button that does nothing) — treat a missing core feature as an issue, not just crashes.
+Respond with ONLY raw JSON: { "overall_ok": true or false, "issues": [ { "file": "path", "problem": "specific bug or missing feature" } ] }
+If no real issues, overall_ok true and empty issues. Only real bugs/missing core features, not style nitpicks.`;
+
+  function fixerSystem(outputMode) {
+    const note = outputMode === "single-file" ? ` The project is a single "app.html" file — return the full corrected file.` : "";
+    return `You are a senior engineer fixing bugs. Output the CORRECTED full contents of every file that needed a change.${note}
+Respond with ONLY raw JSON: { "files": [ { "path": "relative/file/path.ext", "content": "full corrected file content" } ] }`;
+  }
+
+  function setStage(stage) {
+    state.stage = stage;
+    if (stage === "idle") { el.statusLine.classList.remove("active"); el.progressTrack.classList.remove("active"); return; }
+    el.statusLine.classList.add("active");
+    el.statusText.textContent = STAGE_LABELS[stage] || stage;
+    if (stage === "done" || stage === "error") {
+      el.progressFill.style.width = "100%";
+      setTimeout(() => { el.statusLine.classList.remove("active"); el.progressTrack.classList.remove("active"); el.progressFill.style.width = "0%"; }, 700);
+    } else {
+      el.progressTrack.classList.add("active");
+      el.progressFill.style.width = (STAGE_PROGRESS[stage] || 10) + "%";
+    }
+    techLog(STAGE_LABELS[stage] || stage);
+  }
+
+  function techLog(text) {
+    const line = document.createElement("div"); line.className = "tech-log-line";
+    const time = new Date().toLocaleTimeString([], { hour12: false });
+    line.innerHTML = `<span class="tech-log-time">${time}</span>${escapeHtml(text)}`;
+    el.techLogBody.appendChild(line); el.techLogBody.scrollTop = el.techLogBody.scrollHeight;
+  }
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+  async function runPipeline(userRequest) {
+    el.send.disabled = true;
+    const existingFilesContext = Object.keys(state.files).length ? `\n\nExisting project files (edit/extend, keep unrelated parts unless implied):\n${JSON.stringify(state.files, null, 2)}` : "";
+    try {
+      const patterns = patternContext(userRequest);
+      if (patterns) techLog(`Matched pattern(s): ${matchPatterns(userRequest).map(h => h.name).join(", ")}`);
+
+      setStage("planning");
+      const plan = parseJSONLoose(await callModel("planner", PLANNER_SYSTEM, userRequest + patterns + existingFilesContext));
+      techLog(`Plan: ${plan.files.length} file(s) — ${plan.files.map(f => f.path).join(", ")}`);
+
+      setStage("coding");
+      const coderPrompt = `Original request: ${userRequest}${patterns}\n\nBuild plan:\n${JSON.stringify(plan, null, 2)}${existingFilesContext}`;
+      const codeResult = parseJSONLoose(await callModel("coder", coderSystem(state.outputMode), coderPrompt));
+      let files = {}; for (const f of codeResult.files) files[f.path] = f.content;
+      techLog(`Generated ${Object.keys(files).length} file(s).`);
+
+      if (el.critiqueToggle.checked) {
+        setStage("reviewing");
+        const review = parseJSONLoose(await callModel("reviewer", REVIEWER_SYSTEM, `Original request: ${userRequest}${patterns}\n\nFiles:\n${JSON.stringify(files, null, 2)}`));
+        if (!review.overall_ok && review.issues?.length) {
+          techLog(`Found ${review.issues.length} issue(s): ${review.issues.map(i => i.file).join(", ")}`);
+          setStage("fixing");
+          const fixPrompt = `Files:\n${JSON.stringify(files, null, 2)}\n\nIssues:\n${JSON.stringify(review.issues, null, 2)}`;
+          const fixResult = parseJSONLoose(await callModel("fixer", fixerSystem(state.outputMode), fixPrompt));
+          for (const f of fixResult.files) files[f.path] = f.content;
+          techLog(`Patched ${fixResult.files.length} file(s).`);
+        } else { techLog("Review passed — no issues found."); }
+      }
+
+      state.files = state.outputMode === "single-file" ? files : { ...state.files, ...files };
+      renderFileTree();
+      setStage("done");
+      addChatMessage("assistant", `Built ${Object.keys(files).length} file${Object.keys(files).length === 1 ? "" : "s"}.${plan.notes ? " " + plan.notes : ""}`, Object.keys(files));
+      el.downloadBtn.style.display = "inline-flex";
+    } catch (err) {
+      setStage("error");
+      addChatMessage("error", `Something went wrong: ${err.message}`);
+    } finally { el.send.disabled = false; }
+  }
+
+  function addChatMessage(role, text, fileList) {
+    el.chatEmpty.style.display = "none";
+    state.messages.push({ role, text });
+    const bubble = document.createElement("div");
+    bubble.className = role === "error" ? "msg msg-error" : `msg msg-${role}`;
+    bubble.textContent = text;
+    if (fileList && fileList.length) {
+      const chips = document.createElement("div"); chips.className = "file-chips";
+      for (const path of fileList) {
+        const chip = document.createElement("button"); chip.className = "file-chip"; chip.textContent = path;
+        chip.addEventListener("click", () => openCodePanel(path));
+        chips.appendChild(chip);
+      }
+      bubble.appendChild(chips);
+    }
+    el.chatInner.appendChild(bubble);
+    el.chatScroll.scrollTop = el.chatScroll.scrollHeight;
+  }
+
+  el.send.addEventListener("click", handleSend);
+  el.input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } });
+  function handleSend() {
+    const text = el.input.value.trim();
+    if (!text || el.send.disabled) return;
+    addChatMessage("user", text); el.input.value = ""; el.input.style.height = "auto"; runPipeline(text);
+  }
+
+  function renderFileTree() {
+    el.fileTree.innerHTML = "";
+    const paths = Object.keys(state.files).sort();
+    if (!paths.length) { el.fileTree.innerHTML = `<div class="empty-hint">Nothing built yet.</div>`; return; }
+    for (const path of paths) {
+      const item = document.createElement("div"); item.className = "file-item"; item.textContent = path;
+      item.addEventListener("click", () => openCodePanel(path)); el.fileTree.appendChild(item);
+    }
+  }
+  function openCodePanel(path) {
+    document.querySelectorAll(".file-item").forEach(n => n.classList.toggle("active", n.textContent === path));
+    el.codePanelTitle.textContent = path; el.codeView.textContent = state.files[path] ?? "";
+    el.codeOverlay.classList.add("open");
+  }
+
+  el.downloadBtn.addEventListener("click", async () => {
+    const paths = Object.keys(state.files);
+    if (!paths.length) return;
+    if (state.outputMode === "single-file" && paths.length === 1) {
+      const path = paths[0];
+      const blob = new Blob([state.files[path]], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = path; a.click();
+      URL.revokeObjectURL(url); return;
+    }
+    const zip = new JSZip();
+    for (const [path, content] of Object.entries(state.files)) zip.file(path, content);
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "codebox-project.zip"; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  renderFileTree();
+  </script>
+</body>
+</html>
