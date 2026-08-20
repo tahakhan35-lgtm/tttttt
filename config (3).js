@@ -27,7 +27,7 @@
 // change it to any OpenRouter model id if you'd rather use something else.
 
 const CODEBOX_KEYS = [
-  { key: "PASTE_KEY_HERE", model: "nvidia/nemotron-3-ultra-550b-a55b:free" },
+  { key: "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", model: "nvidia/nemotron-3-ultra-550b-a55b:free" },
   { key: "PASTE_KEY_HERE", model: "qwen/qwen3-coder:free" },
   { key: "PASTE_KEY_HERE", model: "z-ai/glm-5.2:free" },
   { key: "PASTE_KEY_HERE", model: "deepseek/deepseek-chat-v3.1:free" },
